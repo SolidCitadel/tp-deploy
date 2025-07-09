@@ -44,7 +44,6 @@ jobs:
         run: |
           mkdir deploy
           cp .env deploy/
-          cp Dockerfile deploy/
           cp docker-compose.yml deploy/
           cp -r nginx/ deploy/
           cp -r scripts/ deploy
