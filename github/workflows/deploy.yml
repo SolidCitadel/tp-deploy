@@ -1,0 +1,77 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch: # 수동 실행을 위한 트리거 추가
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # =================================================
+  # 2. Deploy Job: EC2에 배포
+  # =================================================
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          
+      - name: Download imagedefinitions.json from S3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: aws s3 cp s3://$S3_BUCKET/imagedefinitions.json imagedefinitions.json
+
+      - name: Create .env file
+        run: |
+          echo "SPRING_APPLICATION_NAME=${{ vars.SPRING_APPLICATION_NAME }}" >> .env
+          echo "SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}" >> .env
+          echo "SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}" >> .env
+          echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}" >> .env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+          echo "ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}" >> .env
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir deploy
+          cp .env deploy/
+          cp Dockerfile deploy/
+          cp docker-compose.yml deploy/
+          cp -r nginx/ deploy/
+          cp -r scripts/ deploy
+          cp appspec.yml deploy/
+          cp imagedefinitions.json deploy/
+
+      - name: Make zip file for CodeDeploy
+        run: |
+          cd deploy
+          zip -r ../deploy.zip .
+          cd ..
+
+      - name: Upload zip to S3
+        id: upload-s3
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        run: |
+          aws s3 cp deploy.zip s3://$S3_BUCKET/deploy.zip
+          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          echo "s3_key=deploy.zip" >> $GITHUB_OUTPUT
+
+      - name: Deploy to EC2 via CodeDeploy
+        env:
+          APP_NAME: ${{ vars.CODE_DEPLOY_APP_NAME }}
+          GROUP_NAME: ${{ vars.CODE_DEPLOY_GROUP_NAME }}
+        run: |
+          aws deploy create-deployment \
+            --application-name $APP_NAME \
+            --deployment-group-name $GROUP_NAME \
+            --s3-location bucket=${{ steps.upload-s3.outputs.s3_bucket }},key=${{ steps.upload-s3.outputs.s3_key }},bundleType=zip
