@@ -31,7 +31,6 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "SPRING_APPLICATION_NAME=${{ vars.SPRING_APPLICATION_NAME }}" >> .env
           echo "SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}" >> .env
           echo "SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}" >> .env
           echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}" >> .env
