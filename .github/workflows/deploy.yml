@@ -24,30 +24,35 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE }}
           aws-region: ${{ vars.AWS_REGION }}
           
-      - name: Download imagedefinitions.json from S3
+
+      - name: Download image-uris from S3
         env:
           S3_BUCKET: ${{ vars.S3_BUCKET }}
-        run: aws s3 cp s3://$S3_BUCKET/imagedefinitions.json imagedefinitions.json
+        run: |
+          aws s3 cp s3://$S3_BUCKET/tp-admin-api.txt tp-admin-api.txt
+          aws s3 cp s3://$S3_BUCKET/tp-user-api.txt tp-user-api.txt
 
       - name: Create .env file
         run: |
-          echo "SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}" >> .env
-          echo "SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}" >> .env
-          echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}" >> .env
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}" >> .env
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
-          echo "ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}" >> .env
+          echo "SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}" >> .env.app
+          echo "SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}" >> .env.app
+          echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}" >> .env.app
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env.app
+          echo "CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}" >> .env.app
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env.app
+          echo "ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}" >> .env.app
+          echo "TP_ADMIN_API_IMAGE_URI=$(cat tp-admin-api.txt)" >> .env.host
+          echo "TP_USER_API_IMAGE_URI=$(cat tp-user-api.txt)" >> .env.host
 
       - name: Prepare deploy directory
         run: |
           mkdir deploy
-          cp .env deploy/
+          cp .env.app deploy/
+          cp .env.host deploy/
           cp docker-compose.yml deploy/
           cp -r nginx/ deploy/
           cp -r scripts/ deploy
           cp appspec.yml deploy/
-          cp imagedefinitions.json deploy/
 
       - name: Make zip file for CodeDeploy
         run: |

@@ -1,11 +1,20 @@
 services:
   tp-admin-api:
-    image: ${SPRING_APP_IMAGE_URI}
+    image: ${TP_ADMIN_API_IMAGE_URI}
     container_name: tp-admin-api
     ports:
       - "8081:8081"
     env_file:
-      - .env
+      - .env.app
+    restart: always
+
+  tp-user-api:
+    image: ${TP_USER_API_IMAGE_URI}
+    container_name: tp-user-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.app
     restart: always
 
   reverse-proxy:
@@ -17,6 +26,7 @@ services:
       - "443:443"
     depends_on:
       - tp-admin-api
+      - tp-user-api
     volumes:
       - ./nginx/certs:/etc/nginx/certs
     restart: always
