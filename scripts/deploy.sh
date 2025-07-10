@@ -9,11 +9,11 @@ if [ ! -f .env.host ]; then
   exit 1
 fi
 
-# 3. docker-compose로 애플리케이션 실행
+# 3. docker compose로 애플리케이션 실행
 #    'up' 명령어는 변경된 서비스(예: 이미지가 바뀐 spring-app)만 지능적으로 다시 생성합니다.
 #    Nginx는 변경사항이 없으므로 건드리지 않습니다.
 #    -d: 백그라운드에서 실행
-docker-compose up --env-file .env.host -d
+docker compose --env-file .env.host up -d
 
 # 4. 오래된 미사용 이미지 정리
 docker image prune -f -a
